@@ -27,6 +27,18 @@ and then open [this link](http://127.0.0.1:8080).
 
 # Usage
 ```js
+const threeGeom = new THREE.TorusGeometry(1.5, .5, 32, 63);
+const scalarField = [...] // at vertices
+
+const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, [0, 0.1, 0.7, 3.1])
+const result = filledContours.run(scalarField, convertToKeplerGeometry(threeGeom))
+const newThreeGeom = createMeshFromKeplerResult(result) // filled
+scene.add(newThreeGeom)
+
+// ----------------------------------------------
+// Utilities for three <-> keplerlit
+// ----------------------------------------------
+
 /**
  * Convert Three.js BufferGeometry to KeplerLit BufferGeometry.
  * Since this lib is independent of three.js, we have to convert the geometry and topology accordingly
@@ -82,14 +94,4 @@ createMeshFromKeplerResult(result) {
 
     return new THREE.Mesh(geometry, material);
 }
-
-// -------------------------
-
-const threeGeom = new THREE.TorusGeometry(1.5, .5, 32, 63);
-const scalarField = [...] // at vertices
-
-const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, [0, 0.1, 0.7, 3.1])
-const result = filledContours.run(scalarField, convertToKeplerGeometry(threeGeom))
-const newThreeGeom = createMeshFromKeplerResult(result) // filled
-scene.add(newThreeGeom)
 ```
