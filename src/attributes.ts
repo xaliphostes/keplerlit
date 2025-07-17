@@ -55,7 +55,7 @@
  *   return [values[0] * 2, values[1] * 2, values[2] * 2]; // Scale by 2
  * });
  */
-class BufferAttribute {
+export class BufferAttribute {
     array: Float32Array | Uint16Array | Uint32Array;
     itemSize: number;
     count: number;
@@ -269,7 +269,7 @@ class BufferAttribute {
 /**
  * BufferGeometry class for handling multiple BufferAttributes + one for the geometry and one for the indices
  */
-class BufferGeometry {
+export class BufferGeometry {
     private attributes: { [key: string]: BufferAttribute } = {};
     private positions: Float32BufferAttribute | null = null;
     private indices: Uint32BufferAttribute | null = null;
@@ -499,7 +499,7 @@ class BufferGeometry {
  * @param itemSize - Number of components per item (e.g., 3 for vec3)
  * @param normalized - Whether the attribute is normalized (default: false)
  */
-class Float32BufferAttribute extends BufferAttribute {
+export class Float32BufferAttribute extends BufferAttribute {
     constructor(array: number[] | Float32Array, itemSize: number, normalized: boolean = false) {
         const typedArray = array instanceof Float32Array ? array : new Float32Array(array);
         super(typedArray, itemSize, normalized);
@@ -512,7 +512,7 @@ class Float32BufferAttribute extends BufferAttribute {
  * @param itemSize - Number of components per item (e.g., 3 for vec3)
  * @param normalized - Whether the attribute is normalized (default: false)
  */
-class Uint16BufferAttribute extends BufferAttribute {
+export class Uint16BufferAttribute extends BufferAttribute {
     constructor(array: number[] | Uint16Array, itemSize: number, normalized: boolean = false) {
         const typedArray = array instanceof Uint16Array ? array : new Uint16Array(array);
         super(typedArray, itemSize, normalized);
@@ -525,12 +525,9 @@ class Uint16BufferAttribute extends BufferAttribute {
  * @param itemSize - Number of components per item (e.g., 3 for vec3)
  * @param normalized - Whether the attribute is normalized (default: false)
  */
-class Uint32BufferAttribute extends BufferAttribute {
+export class Uint32BufferAttribute extends BufferAttribute {
     constructor(array: number[] | Uint32Array, itemSize: number, normalized: boolean = false) {
         const typedArray = array instanceof Uint32Array ? array : new Uint32Array(array);
         super(typedArray, itemSize, normalized);
     }
 }
-
-// Export the classes
-export { BufferAttribute, BufferGeometry, Float32BufferAttribute, Uint16BufferAttribute, Uint32BufferAttribute };
