@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Isocontour Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            min-width: 200px;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        button {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background: #666;
+        }
+
+        button.active {
+            background: #0066cc;
+        }
+    </style>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+          }
+        }
+        </script>
+    </script>
+</head>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div id="controls">
+        <div class="control-group">
+            <label>Surface Type:</label>
+            <button id="wave-surface" class="active">Wave Surface</button>
+            <button id="sphere-surface">Sphere</button>
+            <button id="torus-surface">Torus</button>
+        </div>
+        <div class="control-group">
+            <label>Display Mode:</label>
+            <button id="filled-contours" class="active">Filled</button>
+            <button id="line-contours">Lines</button>
+            <button id="both-contours">Both</button>
+        </div>
+        <div class="control-group">
+            <label for="num-contours">Number of Contours: <span id="contour-value">10</span></label>
+            <input type="range" id="num-contours" min="5" max="50" value="10">
+        </div>
+        <div class="control-group">
+            <label for="wireframe-toggle">
+                <input type="checkbox" id="wireframe-toggle"> As wireframe
+            </label>
+            <label for="wmesh-toggle">
+                <input type="checkbox" id="wmesh-toggle"> Show mesh
+            </label>
+        </div>
+        <div class="control-group">
+            <button id="regenerate">Regenerate Surface</button>
+        </div>
+    </div>
+
+    <!-- Your kepler.js library -->
+    <script src="/dist/keplerlit.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three'
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+        import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
+
+        const keplerlit = window['KeplerLit']
+
+        class IsocontourExample {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.controls = null;
+
+                // Surface and contour objects
+                this.surfaceMesh = null;
+                this.contourMesh = null;
+                this.contourLines = null;
+                this.wireframeMesh = null;
+
+                // Current state
+                this.currentSurface = 'wave';
+                this.displayMode = 'filled';
+                this.numContours = 10;
+                this.showWireframe = false;
+                this.showWireframeIso = false;
+
+                this.init();
+                this.setupControls();
+                this.generateSurface();
+                this.animate();
+            }
+
+            init() {
+                // Setup renderer
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x222222);
+                document.getElementById('container').appendChild(this.renderer.domElement);
+
+                // Setup camera
+                this.camera.position.set(3, 3, 3);
+                this.camera.lookAt(0, 0, 0);
+
+                // Setup lights
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.99);
+                this.scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 10);
+                this.scene.add(directionalLight);
+
+                // Setup OrbitControls
+                this.controls = new TrackballControls(this.camera, this.renderer.domElement);
+                // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+
+                // Handle window resize
+                window.addEventListener('resize', () => this.onWindowResize());
+            }
+
+            setupControls() {
+                // Surface type controls
+                document.getElementById('wave-surface').addEventListener('click', () => {
+                    this.setSurfaceType('wave');
+                });
+                document.getElementById('sphere-surface').addEventListener('click', () => {
+                    this.setSurfaceType('sphere');
+                });
+                document.getElementById('torus-surface').addEventListener('click', () => {
+                    this.setSurfaceType('torus');
+                });
+
+                // Display mode controls
+                document.getElementById('filled-contours').addEventListener('click', () => {
+                    this.setDisplayMode('filled');
+                });
+                document.getElementById('line-contours').addEventListener('click', () => {
+                    this.setDisplayMode('lines');
+                });
+                document.getElementById('both-contours').addEventListener('click', () => {
+                    this.setDisplayMode('both');
+                });
+
+                // Number of contours
+                const contoursSlider = document.getElementById('num-contours');
+                contoursSlider.addEventListener('input', (e) => {
+                    this.numContours = parseInt(e.target.value);
+                    document.getElementById('contour-value').textContent = this.numContours;
+                    this.generateContours();
+                });
+
+                // Wireframe toggle
+                document.getElementById('wmesh-toggle').addEventListener('change', (e) => {
+                    this.showWireframe = e.target.checked;
+                    this.updateWireframe();
+                });
+
+                document.getElementById('wireframe-toggle').addEventListener('change', (e) => {
+                    this.showWireframeIso = e.target.checked;
+                    this.generateContours();
+                });
+
+                // Regenerate button
+                document.getElementById('regenerate').addEventListener('click', () => {
+                    this.generateSurface();
+                });
+            }
+
+            setSurfaceType(type) {
+                this.currentSurface = type;
+
+                // Update button states
+                document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`${type}-surface`).classList.add('active');
+
+                this.generateSurface();
+            }
+
+            setDisplayMode(mode) {
+                this.displayMode = mode;
+
+                // Update button states
+                document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`${mode === 'filled' ? 'filled' : mode === 'lines' ? 'line' : 'both'}-contours`).classList.add('active');
+
+                this.generateContours();
+            }
+
+            generateSurface() {
+                // Clear existing meshes
+                this.clearMeshes();
+
+                let geometry, scalarField;
+
+                switch (this.currentSurface) {
+                    case 'wave':
+                        [geometry, scalarField] = this.createWaveSurface();
+                        break;
+                    case 'sphere':
+                        [geometry, scalarField] = this.createSphereSurface();
+                        break;
+                    case 'torus':
+                        [geometry, scalarField] = this.createTorusSurface();
+                        break;
+                }
+
+                // Store for contour generation
+                this.geometry = geometry;
+                this.scalarField = scalarField;
+
+                // Create surface mesh
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x888888,
+                    transparent: false,
+                    opacity: 0.3
+                });
+                this.surfaceMesh = new THREE.Mesh(geometry, material);
+                this.scene.add(this.surfaceMesh);
+
+                this.generateContours();
+                this.updateWireframe();
+            }
+
+            createWaveSurface() {
+                const width = 34;
+                const height = 34;
+                const geometry = new THREE.PlaneGeometry(4, 4, width - 1, height - 1);
+
+                const positions = geometry.attributes.position.array;
+                const scalarField = [];
+
+                // Generate wave pattern
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i] / 4;
+                    const y = positions[i + 1] / 4;
+
+                    // Wave equation
+                    const z = 0.5 * Math.sin(2 * Math.PI * x) * Math.cos(2 * Math.PI * y) +
+                        0.3 * Math.sin(4 * Math.PI * x) * Math.sin(3 * Math.PI * y);
+                    positions[i + 2] = z;
+
+                    // Scalar field for contouring
+                    const scalar = Math.sqrt(x * x + y * y) + z;
+                    scalarField.push(scalar);
+                }
+
+                geometry.attributes.position.needsUpdate = true;
+                geometry.computeVertexNormals();
+
+                return [geometry, scalarField];
+            }
+
+            createSphereSurface() {
+                const radius = 1.5;
+                const widthSegments = 64;
+                const heightSegments = 32;
+                const geometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
+
+                const positions = geometry.attributes.position.array;
+                const scalarField = [];
+
+                // Generate scalar field based on height and a wave pattern
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+
+                    // Scalar field combining height and radial distance
+                    const scalar = y + 0.5 * Math.sin(5 * Math.atan2(z, x)) * Math.cos(3 * Math.asin(y / radius));
+                    scalarField.push(scalar);
+                }
+
+                return [geometry, scalarField];
+            }
+
+            createTorusSurface() {
+                const torusRadius = 1.5;
+                const tubeRadius = 0.5;
+                const radialSegments = 32;
+                const tubularSegments = 64;
+                const geometry = new THREE.TorusGeometry(torusRadius, tubeRadius, radialSegments, tubularSegments);
+
+                const positions = geometry.attributes.position.array;
+                const scalarField = [];
+
+                // Generate scalar field
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+
+                    // Distance from center + wave pattern
+                    const radialDist = Math.sqrt(x * x + z * z);
+                    const scalar = y + 0.3 * Math.sin(8 * Math.atan2(z, x)) + 0.2 * Math.sin(6 * Math.atan2(y, radialDist - torusRadius));
+                    scalarField.push(scalar);
+                }
+
+                return [geometry, scalarField];
+            }
+
+            generateContours() {
+                if (!this.geometry || !this.scalarField) return;
+
+                // Clear existing contour meshes
+                if (this.contourMesh) {
+                    this.scene.remove(this.contourMesh);
+                    this.contourMesh = null;
+                }
+                if (this.contourLines) {
+                    this.scene.remove(this.contourLines);
+                    this.contourLines = null;
+                }
+
+                // Convert Three.js geometry to kepler format
+                const keplerGeometry = this.convertToKeplerGeometry(this.geometry);
+
+                // Calculate contour levels
+                const minVal = Math.min(...this.scalarField);
+                const maxVal = Math.max(...this.scalarField);
+                const isoList = [];
+                for (let i = 0; i < this.numContours; i++) {
+                    isoList.push(minVal + (i / (this.numContours - 1)) * (maxVal - minVal));
+                }
+
+                try {
+                    // Generate filled contours
+                    if (this.displayMode === 'filled' || this.displayMode === 'both') {
+                        const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, isoList);
+                        const result = filledContours.run(this.scalarField, keplerGeometry);
+
+                        if (result) {
+                            this.contourMesh = this.createMeshFromKeplerResult(result);
+                            this.scene.add(this.contourMesh);
+                            this.scene.remove(this.surfaceMesh); // Remove surface mesh if contours are displayed
+                        }
+                    }
+
+                    // Generate line contours
+                    if (this.displayMode === 'lines' || this.displayMode === 'both') {
+                        const result = keplerlit.createIsoContourLines(keplerGeometry, this.scalarField, isoList, "#000000", "Rainbow");
+
+                        if (result.positions.length > 0) {
+                            const lineGeometry = new THREE.BufferGeometry();
+                            lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(result.positions, 3));
+
+                            // const colors = new Float32Array(result.color);
+                            // lineGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                            const lineMaterial = new THREE.LineBasicMaterial({
+                                // vertexColors: true,
+                                color: 0x000000,
+                                linewidth: 2
+                            });
+
+                            this.contourLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+                            this.scene.add(this.contourLines);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error generating contours:', error);
+                }
+            }
+
+            /**
+             * Simple triangulation for cases where indices are not provided
+             */
+            generateIndices(vertexCount) {
+                const indices = [];
+                for (let i = 0; i < vertexCount - 2; i += 3) {
+                    indices.push(i, i + 1, i + 2);
+                }
+                return indices;
+            }
+
+            /**
+             * Convert Three.js BufferGeometry to KeplerLit BufferGeometry
+             */
+            convertToKeplerGeometry(threeGeometry) {
+                const positions = threeGeometry.attributes.position.array;
+                const indices = threeGeometry.index ? threeGeometry.index.array : this.generateIndices(positions.length / 3);
+
+                const keplerPositions = new keplerlit.Float32BufferAttribute(Array.from(positions), 3);
+                const keplerIndices = new keplerlit.Uint32BufferAttribute(Array.from(indices), 1);
+
+                const keplerGeometry = new keplerlit.BufferGeometry();
+                keplerGeometry.setPositions(keplerPositions);
+                keplerGeometry.setIndices(keplerIndices);
+
+                return keplerGeometry;
+            }
+
+            /**
+             * Create a Three.js mesh from a KeplerLit result
+             */
+            createMeshFromKeplerResult(result) {
+                const geometry = new THREE.BufferGeometry();
+
+                // Convert positions
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(result.position, 3));
+
+                // Convert indices
+                geometry.setIndex(new THREE.Uint32BufferAttribute(result.index, 1));
+
+                // Convert colors
+                const colors = new Float32Array(result.color);
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                geometry.computeVertexNormals();
+                // geometry.setAttribute('normal', new THREE.Float32BufferAttribute(result.normal, 3))
+
+                const material = new THREE.MeshPhongMaterial({
+                    vertexColors: true,
+                    side: THREE.DoubleSide,
+                    wireframe: this.showWireframeIso,
+                    flatShading: false,
+                    polygonOffset: true,
+                    polygonOffsetFactor: .5
+                });
+
+                return new THREE.Mesh(geometry, material);
+            }
+
+            updateWireframe() {
+                if (this.wireframeMesh) {
+                    this.scene.remove(this.wireframeMesh);
+                    this.wireframeMesh = null;
+                }
+
+                if (this.showWireframe && this.surfaceMesh) {
+                    const wireframeGeometry = new THREE.WireframeGeometry(this.surfaceMesh.geometry);
+                    const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
+                    this.wireframeMesh = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+                    this.scene.add(this.wireframeMesh);
+                }
+            }
+
+            clearMeshes() {
+                [this.surfaceMesh, this.contourMesh, this.contourLines, this.wireframeMesh].forEach(mesh => {
+                    if (mesh) {
+                        this.scene.remove(mesh);
+                        if (mesh.geometry) mesh.geometry.dispose();
+                        if (mesh.material) mesh.material.dispose();
+                    }
+                });
+                this.surfaceMesh = null;
+                this.contourMesh = null;
+                this.contourLines = null;
+                this.wireframeMesh = null;
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                if (this.controls) {
+                    this.controls.update();
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize the example when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new IsocontourExample();
+        });
+    </script>
+</body>
+
+</html>

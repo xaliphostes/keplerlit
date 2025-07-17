@@ -1,0 +1,25 @@
+{
+    "name": "keplerlit",
+    "version": "1.0.0",
+    "description": "scientific visualization based on three.js",
+    "main": "index.js",
+    "scripts": {
+        "build": "webpack",
+        "serve": "http-server . -p 8080"
+    },
+    "author": "xaliphostes",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/three": "^0.173.0",
+        "camera-controls": "^2.10.0",
+        "three": "0.173.0",
+        "ts-loader": "^9.3.0",
+        "ts-shader-loader": "1.0.6",
+        "typescript": "^4.6.4",
+        "webpack-cli": "^4.9.2",
+        "webpack-dev-server": "4.9.0"
+    },
+    "dependencies": {
+        "webpack": "^5.100.2"
+    }
+}

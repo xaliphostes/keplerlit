@@ -1,0 +1,1 @@
+- make separate iso-lines so that each line can have a specific color 
