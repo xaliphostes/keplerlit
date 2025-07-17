@@ -27,13 +27,18 @@ and then open [this link](http://127.0.0.1:8080).
 
 # Usage
 ```js
-const threeGeom = new THREE.TorusGeometry(1.5, .5, 32, 63);
+// three.js part
+const scene = ...
+const threeGeom = ...
 const scalarField = [...] // at vertices
+const isoContourList = [...]
 
-const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, [0, 0.1, 0.7, 3.1])
+// keplerlit part
+const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, isoContourList)
 const result = filledContours.run(scalarField, convertToKeplerGeometry(threeGeom))
-const newThreeGeom = createMeshFromKeplerResult(result) // filled
-scene.add(newThreeGeom)
+scene.add(createMeshFromKeplerResult(result))
+
+
 
 // ----------------------------------------------
 // Utilities for three <-> keplerlit
