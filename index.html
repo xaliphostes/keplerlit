@@ -113,7 +113,7 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
         import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
 
-        const keplerlit = window['KeplerLit']
+        const keplerlit = window['keplerlit']
 
         class IsocontourExample {
             constructor() {
@@ -134,6 +134,7 @@
                 this.numContours = 10;
                 this.showWireframe = false;
                 this.showWireframeIso = false;
+                this.colorScale = null;
 
                 this.init();
                 this.setupControls();
@@ -144,7 +145,7 @@
             init() {
                 // Setup renderer
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.setClearColor(0x222222);
+                this.renderer.setClearColor(0xaaaaaa);
                 document.getElementById('container').appendChild(this.renderer.domElement);
 
                 // Setup camera
@@ -166,7 +167,35 @@
                 this.controls.dampingFactor = 0.05;
 
                 // Handle window resize
-                window.addEventListener('resize', () => this.onWindowResize());
+                window.addEventListener('resize', () => {
+                    this.onWindowResize()
+                    if (this.colorScale) {
+                        this.colorScale.resize(window.innerWidth, window.innerHeight);
+                        // this.updateColorScalePosition();
+                        const x = window.innerWidth - 100
+                        const y = 50;
+                        this.colorScale.updatePosition(x, y);
+                        this.colorScale.updateSize(30, 200);
+                    }
+                });
+
+                const colorStops = [
+                    { position: 0, color: '#0066cc' },
+                    { position: 0.5, color: '#ffff00' },
+                    { position: 1, color: '#cc0000' }
+                ]
+                this.colorScale = new keplerlit.ColorScale({
+                    canvas: this.renderer.domElement,              // Existing canvas
+                    x: window.innerWidth - 100,                        // X position
+                    y: 50,                        // Y position  
+                    width: 30,                    // Width in pixels
+                    height: 200,                  // Height in pixels
+                    min: 0,                       // Minimum value
+                    max: 100,                     // Maximum value
+                    attributeName: 'Temperature', // Label for the scale
+                    orientation: 'vertical',      // 'vertical' or 'horizontal'
+                    colorStops: colorStops
+                });
             }
 
             setupControls() {
@@ -376,8 +405,12 @@
                 try {
                     // Generate filled contours
                     if (this.displayMode === 'filled' || this.displayMode === 'both') {
-                        const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, isoList);
-                        const result = filledContours.run(this.scalarField, keplerGeometry);
+                        // const filledContours = new keplerlit.IsoContoursFilled('Rainbow', 256, isoList);
+                        // const result = filledContours.run(keplerGeometry, this.scalarField);
+                        const result = keplerlit.createIsoContoursFilled(keplerGeometry, this.scalarField, isoList, {
+                            colorTable: 'Rainbow',
+                            nbColors: 128
+                        })
 
                         if (result) {
                             this.contourMesh = this.createMeshFromKeplerResult(result);

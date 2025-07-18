@@ -11,6 +11,21 @@ export type IsoFillReturnedType = {
     normal?: number[]
 }
 
+/**
+ * If min and max are not provided, there are computed from  the attribute.
+ * If the isoValues_ array is empty, an empty object will be returned.
+ */
+export function createIsoContoursFilled(geometry: BufferGeometry, attr: number[], isoList: number[], {
+    min = undefined,
+    max = undefined,
+    lut = 'Rainbow',
+    nbColors = 128,
+
+}: { min?: number, max?: number, lut?: string, nbColors?: number } = {}): IsoFillReturnedType | undefined {
+    const isoContours = new IsoContoursFilled(lut, nbColors, isoList)
+    return isoContours.run(geometry, attr, min, max)
+}
+
 export class IsoContoursFilled {
     attr: Array<number> = undefined
     nodes_: BufferAttribute = undefined
@@ -46,14 +61,10 @@ export class IsoContoursFilled {
     }
 
     /**
-     * 
-     * @param attr The values at each vertex of the mesh
-     * @param geometry 
-     * @param min 
-     * @param max 
-     * @returns 
+     * If min and max are not provided, there are computed from  the attribute.
+     * If the isoValues_ array is empty, an empty object will be returned.
      */
-    run(attr: Array<number>, geometry: BufferGeometry, min: number = undefined, max: number = undefined): IsoFillReturnedType | undefined {
+    run(geometry: BufferGeometry, attr: number[], min: number = undefined, max: number = undefined): IsoFillReturnedType | undefined {
         this.attr = attr
 
         const minmax = minMax(this.attr)

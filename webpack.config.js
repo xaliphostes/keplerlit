@@ -16,7 +16,7 @@ module.exports = {
 		publicPath: "/dist/",
 		// Configure the output as a library
 		library: {
-			name: 'KeplerLit',
+			name: 'keplerlit',
 			type: 'umd'
 		},
 		globalObject: 'this'
