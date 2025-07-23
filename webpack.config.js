@@ -4,8 +4,8 @@ const path = require("path");
 const DESTINATION = path.resolve(__dirname, 'dist')
 
 module.exports = {
-	mode: "production",
-	// mode: "development",
+	// mode: "production",
+	mode: "development",
 
 	entry: {
 		main: "./src/index.ts",

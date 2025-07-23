@@ -135,6 +135,8 @@
                 this.showWireframe = false;
                 this.showWireframeIso = false;
                 this.colorScale = null;
+                this.compass = null;
+                this.compassPosition = 'bottom-right'; // Default position for compass
 
                 this.init();
                 this.setupControls();
@@ -166,19 +168,7 @@
                 this.controls.enableDamping = true;
                 this.controls.dampingFactor = 0.05;
 
-                // Handle window resize
-                window.addEventListener('resize', () => {
-                    this.onWindowResize()
-                    if (this.colorScale) {
-                        this.colorScale.resize(window.innerWidth, window.innerHeight);
-                        // this.updateColorScalePosition();
-                        const x = window.innerWidth - 100
-                        const y = 50;
-                        this.colorScale.updatePosition(x, y);
-                        this.colorScale.updateSize(30, 200);
-                    }
-                });
-
+                // Color scale setup
                 const colorStops = [
                     { position: 0, color: '#0066cc' },
                     { position: 0.5, color: '#ffff00' },
@@ -195,6 +185,38 @@
                     attributeName: 'Temperature', // Label for the scale
                     orientation: 'vertical',      // 'vertical' or 'horizontal'
                     colorStops: colorStops
+                });
+
+                // Compass2D setup
+                if (false) {
+                    this.compass = new keplerlit.Compass2D({
+                        canvas: this.renderer.domElement,
+                        width: 60,
+                        opacity: 0.9,
+                        cameraAngle: 0,
+                        colors: {}
+                    });
+                    this.compass.setPositionByName(this.compassPosition);
+                }
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.onWindowResize()
+                    if (this.colorScale) {
+                        this.colorScale.resize(window.innerWidth, window.innerHeight);
+                        // this.updateColorScalePosition();
+                        const x = window.innerWidth - 100
+                        const y = 50;
+                        this.colorScale.updatePosition(x, y);
+                        this.colorScale.updateSize(30, 200);
+                    }
+                    if (this.compass) {
+                        this.compass.resize(window.innerWidth, window.innerHeight);
+                        const x = window.innerWidth - 100
+                        const y = 50;
+                        this.compass.updatePosition(x, y);
+                        this.compass.updateSize(200, 200);
+                    }
                 });
             }
 
@@ -536,6 +558,13 @@
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+                if (this.compass) {
+                    // this.compass.setupCanvas();
+                    // const position = document.getElementById('compassPosition').value;
+                    this.compass.setPositionByName(this.compassPosition);
+                    this.compass.render();
+                }
             }
 
             animate() {
@@ -546,6 +575,29 @@
                 }
 
                 this.renderer.render(this.scene, this.camera);
+                this.updateCompass();
+            }
+
+            updateCompass() {
+                if (this.compass) {
+                    // Update compass position
+                    this.compass.setPosition
+                    // Calculate camera's Y rotation (horizontal rotation)
+                    const cameraDirection = new THREE.Vector3();
+                    this.camera.getWorldDirection(cameraDirection);
+
+                    // Convert to compass angle (0° = North, clockwise)
+                    const angle = Math.atan2(cameraDirection.x, cameraDirection.z) * 180 / Math.PI;
+                    const compassAngle = (angle + 360) % 360;
+
+                    this.compass.setCameraAngle(compassAngle);
+                    this.compass.render();
+                }
+
+                // Update UI
+                // document.getElementById('cameraRotation').textContent = Math.round(compassAngle) + '°';
+                // document.getElementById('cameraPosition').textContent =
+                //     `${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`;
             }
         }
 
