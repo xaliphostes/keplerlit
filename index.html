@@ -112,6 +112,7 @@
         import * as THREE from 'three'
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
         import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
+        import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
         const keplerlit = window['keplerlit']
 
@@ -431,7 +432,7 @@
                         // const result = filledContours.run(keplerGeometry, this.scalarField);
                         const result = keplerlit.createIsoContoursFilled(keplerGeometry, this.scalarField, isoList, {
                             colorTable: 'Rainbow',
-                            nbColors: 128
+                            nbColors: 512
                         })
 
                         if (result) {
@@ -519,6 +520,39 @@
                     side: THREE.DoubleSide,
                     wireframe: this.showWireframeIso,
                     flatShading: false,
+                    polygonOffset: true,
+                    polygonOffsetFactor: .5
+                });
+
+                return new THREE.Mesh(geometry, material);
+            }
+
+            /**
+             * Create a smooth mesh from a KeplerLit result
+             */
+            createSmoothMeshFromKeplerResult(result) {
+                // Construire la géométrie
+                let geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(result.position, 3));
+                geometry.setIndex(new THREE.Uint32BufferAttribute(result.index, 1));
+
+                const colors = new Float32Array(result.color);
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                // 🔧 Étape clé : fusionner les sommets qui ont (quasi) la même position
+                //   -> les normales deviennent "partagées" entre faces adjacentes
+                //   (tolérance à ajuster selon l’échelle de ta scène)
+                geometry = BufferGeometryUtils.mergeVertices(geometry, 1e-7);
+
+                // Recalculer des normales lissées
+                geometry.computeVertexNormals();
+
+                // Matériau avec shading lissé + couleurs par sommet
+                const material = new THREE.MeshPhongMaterial({
+                    vertexColors: true,
+                    side: THREE.DoubleSide,
+                    wireframe: this.showWireframeIso,
+                    flatShading: false,          // important pour lisser l’éclairage
                     polygonOffset: true,
                     polygonOffsetFactor: .5
                 });
