@@ -104,13 +104,9 @@
             <button id="regenerate">Regenerate Surface</button>
         </div>
     </div>
-
-    <!-- Your kepler.js library -->
     <script src="dist/keplerlit.js"></script>
-
     <script type="module">
         import * as THREE from 'three'
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
         import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
         import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -163,7 +159,7 @@
                 directionalLight.position.set(10, 10, 10);
                 this.scene.add(directionalLight);
 
-                // Setup OrbitControls
+                // Setup the Controls
                 this.controls = new TrackballControls(this.camera, this.renderer.domElement);
                 // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
                 this.controls.enableDamping = true;
@@ -175,6 +171,7 @@
                     { position: 0.5, color: '#ffff00' },
                     { position: 1, color: '#cc0000' }
                 ]
+
                 this.colorScale = new keplerlit.ColorScale({
                     canvas: this.renderer.domElement,              // Existing canvas
                     x: window.innerWidth - 100,                        // X position
@@ -325,8 +322,8 @@
             }
 
             createWaveSurface() {
-                const width = 34;
-                const height = 34;
+                const width = 4*34;
+                const height = 4*34;
                 const geometry = new THREE.PlaneGeometry(4, 4, width - 1, height - 1);
 
                 const positions = geometry.attributes.position.array;
@@ -355,8 +352,8 @@
 
             createSphereSurface() {
                 const radius = 1.5;
-                const widthSegments = 64;
-                const heightSegments = 32;
+                const widthSegments = 4*64;
+                const heightSegments = 4*32;
                 const geometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
 
                 const positions = geometry.attributes.position.array;
@@ -379,8 +376,8 @@
             createTorusSurface() {
                 const torusRadius = 1.5;
                 const tubeRadius = 0.5;
-                const radialSegments = 32;
-                const tubularSegments = 64;
+                const radialSegments = 4*32;
+                const tubularSegments = 4*64;
                 const geometry = new THREE.TorusGeometry(torusRadius, tubeRadius, radialSegments, tubularSegments);
 
                 const positions = geometry.attributes.position.array;
@@ -468,9 +465,6 @@
                 }
             }
 
-            /**
-             * Simple triangulation for cases where indices are not provided
-             */
             generateIndices(vertexCount) {
                 const indices = [];
                 for (let i = 0; i < vertexCount - 2; i += 3) {
@@ -479,9 +473,6 @@
                 return indices;
             }
 
-            /**
-             * Convert Three.js BufferGeometry to KeplerLit BufferGeometry
-             */
             convertToKeplerGeometry(threeGeometry) {
                 const positions = threeGeometry.attributes.position.array;
                 const indices = threeGeometry.index ? threeGeometry.index.array : this.generateIndices(positions.length / 3);
@@ -496,9 +487,6 @@
                 return keplerGeometry;
             }
 
-            /**
-             * Create a Three.js mesh from a KeplerLit result
-             */
             createMeshFromKeplerResult(result) {
                 const geometry = new THREE.BufferGeometry();
 
@@ -520,39 +508,6 @@
                     side: THREE.DoubleSide,
                     wireframe: this.showWireframeIso,
                     flatShading: false,
-                    polygonOffset: true,
-                    polygonOffsetFactor: .5
-                });
-
-                return new THREE.Mesh(geometry, material);
-            }
-
-            /**
-             * Create a smooth mesh from a KeplerLit result
-             */
-            createSmoothMeshFromKeplerResult(result) {
-                // Construire la géométrie
-                let geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute(result.position, 3));
-                geometry.setIndex(new THREE.Uint32BufferAttribute(result.index, 1));
-
-                const colors = new Float32Array(result.color);
-                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-                // 🔧 Étape clé : fusionner les sommets qui ont (quasi) la même position
-                //   -> les normales deviennent "partagées" entre faces adjacentes
-                //   (tolérance à ajuster selon l’échelle de ta scène)
-                geometry = BufferGeometryUtils.mergeVertices(geometry, 1e-7);
-
-                // Recalculer des normales lissées
-                geometry.computeVertexNormals();
-
-                // Matériau avec shading lissé + couleurs par sommet
-                const material = new THREE.MeshPhongMaterial({
-                    vertexColors: true,
-                    side: THREE.DoubleSide,
-                    wireframe: this.showWireframeIso,
-                    flatShading: false,          // important pour lisser l’éclairage
                     polygonOffset: true,
                     polygonOffsetFactor: .5
                 });
@@ -627,15 +582,9 @@
                     this.compass.setCameraAngle(compassAngle);
                     this.compass.render();
                 }
-
-                // Update UI
-                // document.getElementById('cameraRotation').textContent = Math.round(compassAngle) + '°';
-                // document.getElementById('cameraPosition').textContent =
-                //     `${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`;
             }
         }
 
-        // Initialize the example when the page loads
         window.addEventListener('DOMContentLoaded', () => {
             new IsocontourExample();
         });
