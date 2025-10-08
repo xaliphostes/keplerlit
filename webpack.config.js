@@ -1,26 +1,9 @@
-const webpack = require("webpack");
 const path = require("path");
 
 const DESTINATION = path.resolve(__dirname, 'dist')
 
-module.exports = {
-	// mode: "production",
-	mode: "development",
-
-	entry: {
-		main: "./src/index.ts",
-	},
-	output: {
-		path: DESTINATION,
-		filename: "keplerlit.js",
-		publicPath: "/dist/",
-		// Configure the output as a library
-		library: {
-			name: 'keplerlit',
-			type: 'umd'
-		},
-		globalObject: 'this'
-	},
+const baseConfig = {
+	entry: "./src/index.ts",
 	resolve: {
 		extensions: [".webpack.js", ".ts", ".tsx", ".js"]
 	},
@@ -36,10 +19,41 @@ module.exports = {
 				loader: "ts-loader"
 			}
 		]
-	},
-	devServer: {
-		static: path.join(__dirname, '/'),
-		port: 8000,
-		host: "0.0.0.0",
 	}
-}
+};
+
+// UMD build (for script tags)
+const umdConfig = {
+	...baseConfig,
+	mode: "production",
+	output: {
+		path: DESTINATION,
+		filename: "keplerlit.js",
+		library: {
+			name: 'keplerlit',
+			type: 'umd'
+		},
+		globalObject: 'this'
+	}
+};
+
+// ES Module build (for import statements)
+const moduleConfig = {
+	...baseConfig,
+	mode: "production",
+	output: {
+		path: DESTINATION,
+		filename: "keplerlit.module.js",
+		library: {
+			type: 'module'
+		},
+		environment: {
+			module: true
+		}
+	},
+	experiments: {
+		outputModule: true
+	}
+};
+
+module.exports = [umdConfig, moduleConfig];

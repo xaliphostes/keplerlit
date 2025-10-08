@@ -1,12 +1,13 @@
 {
     "name": "keplerlit",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "description": "scientific visualization based on three.js",
-    "main": "index.js",
+    "main": "./dist/keplerlit.js",
+    "module": "./dist/keplerlit.module.js",
     "scripts": {
         "build": "webpack",
         "serve": "http-server . -p 8080",
-        "publish": "npm publish --access public"
+        "node_publish": "npm publish --access public"
     },
     "author": "xaliphostes",
     "license": "MIT",
